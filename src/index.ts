@@ -1,0 +1,11 @@
+export { Replica, type ReceiveOutcome } from './replica.js';
+export { Document } from './core/document.js';
+export { Rga } from './core/rga.js';
+export { VectorClock } from './core/clock.js';
+export { compareIds, idKey, HEAD, type OpId, type ActorId } from './core/ids.js';
+export { decodeOps, isOp, type Op, type JsonValue } from './core/op.js';
+export { OpLog, type Log } from './store/oplog.js';
+export { MemoryLog } from './store/memory-log.js';
+export { Digest } from './sync/digest.js';
+export { serve } from './sync/server.js';
+export { sync } from './sync/client.js';
