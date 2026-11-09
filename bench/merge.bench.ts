@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 import { Rga } from '../src/core/rga.js';
 import { HEAD, type OpId } from '../src/core/ids.js';
 import { Replica } from '../src/replica.js';
@@ -17,23 +17,27 @@ function seeded(length: number): Rga {
 
 describe('rga append', () => {
   for (const size of [100, 1000, 10000]) {
-    bench(`append into ${size} chars`, () => {
-      const rga = seeded(size);
-      rga.insert({ actor: 'b', counter: size + 1 }, HEAD, 'y');
+    test(`append into ${size} chars`, async ({ bench }) => {
+      await bench(`append into ${size} chars`, () => {
+        const rga = seeded(size);
+        rga.insert({ actor: 'b', counter: size + 1 }, HEAD, 'y');
+      }).run();
     });
   }
 });
 
 describe('divergence and merge', () => {
-  bench('2 replicas x 100 ops', async () => {
-    const a = await Replica.open('a', new MemoryLog());
-    const b = await Replica.open('b', new MemoryLog());
-    await a.createText('body');
-    await b.createText('body');
-    for (let i = 0; i < 100; i += 1) {
-      await a.insert('body', 0, 'a');
-      await b.insert('body', 0, 'b');
-    }
-    await a.receiveAll((b.log as MemoryLog).ops);
+  test('2 replicas x 100 ops', async ({ bench }) => {
+    await bench('2 replicas x 100 ops', async () => {
+      const a = await Replica.open('a', new MemoryLog());
+      const b = await Replica.open('b', new MemoryLog());
+      await a.createText('body');
+      await b.createText('body');
+      for (let i = 0; i < 100; i += 1) {
+        await a.insert('body', 0, 'a');
+        await b.insert('body', 0, 'b');
+      }
+      await a.receiveAll((b.log as MemoryLog).ops);
+    }).run();
   });
 });

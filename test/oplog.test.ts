@@ -1,20 +1,31 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, writeFile, appendFile } from 'node:fs/promises';
+import { mkdtemp, writeFile, appendFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { OpLog } from '../src/store/oplog.js';
 import { Replica } from '../src/replica.js';
 import { MemoryLog } from '../src/store/memory-log.js';
 
-let dir: string | null = null;
+const tempDirs: string[] = [];
+const openedLogs: OpLog[] = [];
 
-async function tempLog(): Promise<OpLog> {
-  dir ??= await mkdtemp(join(tmpdir(), 'converge-test-'));
-  return new OpLog(join(dir, `log-${Math.random().toString(36).slice(2)}.log`));
+function trackedLog(path: string): OpLog {
+  const log = new OpLog(path);
+  openedLogs.push(log);
+  return log;
 }
 
-afterEach(() => {
-  dir = null;
+async function tempLog(): Promise<OpLog> {
+  const dir = await mkdtemp(join(tmpdir(), 'converge-test-'));
+  tempDirs.push(dir);
+  return trackedLog(join(dir, 'log.jsonl'));
+}
+
+afterEach(async () => {
+  // Node 26 treats forgotten open FileHandles as uncaught exceptions. Close
+  // each handle (including reopened replicas) before removing temp files.
+  await Promise.all(openedLogs.splice(0).map((log) => log.close()));
+  await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
 describe('OpLog', () => {
@@ -25,7 +36,7 @@ describe('OpLog', () => {
     await replica.insert('body', 0, 'hey');
     await log.close();
 
-    const reopened = await Replica.open('a', new OpLog(log.path));
+    const reopened = await Replica.open('a', trackedLog(log.path));
     expect(reopened.document.text('body')).toBe('hey');
     expect(reopened.appliedCount).toBe(4);
   });
@@ -38,7 +49,7 @@ describe('OpLog', () => {
     await log.close();
 
     await appendFile(log.path, '{"kind":"text.insert","id":{"act');
-    const reopened = await Replica.open('a', new OpLog(log.path));
+    const reopened = await Replica.open('a', trackedLog(log.path));
     expect(reopened.document.text('body')).toBe('ok');
   });
 
@@ -53,11 +64,13 @@ describe('OpLog', () => {
     lines[1] = '{"broken":true}';
     await writeFile(log.path, lines.join('\n'));
 
-    await expect(Replica.open('a', new OpLog(log.path))).rejects.toThrow(/corrupt log at line 2/);
+    await expect(Replica.open('a', trackedLog(log.path))).rejects.toThrow(/corrupt log at line 2/);
   });
 
   it('returns an empty replay for a missing file', async () => {
-    const log = new OpLog(join(tmpdir(), 'converge-missing', 'nope.log'));
+    const dir = await mkdtemp(join(tmpdir(), 'converge-missing-'));
+    tempDirs.push(dir);
+    const log = trackedLog(join(dir, 'absent.log'));
     expect(await log.readAll()).toEqual([]);
   });
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.2 — Test resource cleanup and dependency maintenance (2026-11-09)
+
+- Close file handles and clean up temporary directories after OpLog tests,
+  including reopen cases. Node 26 treats leaked FileHandles as errors.
+- Update Vitest to the supported 5.1 release and ESLint to the supported v10 line.
+- Raise the minimum Node.js version to 22.13.0 and test on Node 22 and 24.
+- Use `npm ci` in GitHub Actions for reproducible installs; commit the
+  `package-lock.json` created by `npm install` before pushing this update.
+- Re-run the full suite and `npm audit` after installation: these dependency
+  updates were not executable in the offline packaging environment.
+
 ## 0.1.1 — Correctness and durability fixes (2026-11-09)
 
 - Persist incoming operations even when their causal prerequisites are missing.

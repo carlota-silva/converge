@@ -15,10 +15,11 @@ A local-first sync engine written in TypeScript. Replicas can edit independently
 
 ## Quick start
 
-Requires Node.js 20 or newer.
+Requires Node.js 22.13 or newer (Node 24 LTS also supported).
 
 ```bash
 npm install
+npm audit
 npm run typecheck
 npm run lint
 npm test
@@ -45,9 +46,10 @@ For decisions and design trade-offs, see [ARCHITECTURE.md](ARCHITECTURE.md) and 
 
 ## Development and verification
 
-Run `npm install`, then `npm run typecheck`, `npm run lint`, `npm test`,
-and `npm run build`. The GitHub Actions workflow runs those checks on Node 20
-and 22. Run `npm run smoke` after building for a basic standalone
+Run `npm install` to generate `package-lock.json`, then `npm audit`,
+`npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
+Commit `package-lock.json` so GitHub Actions can use reproducible `npm ci`
+installs on Node 22 and 24. Run `npm run smoke` after building for a basic standalone
 integration check without a test-runner dependency.
 
 This codebase is an AI-assisted prototype. Review the tests, logic, and ADRs
